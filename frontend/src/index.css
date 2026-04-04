@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    @apply bg-base-900 text-white font-sans antialiased;
+    background: #07070f;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,58,237,0.18), transparent),
+      radial-gradient(ellipse 50% 40% at 85% 80%, rgba(37,99,235,0.10), transparent);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0d0d1a; }
+  ::-webkit-scrollbar-thumb { background: #2d2d50; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #7c3aed; }
+}
+
+@layer components {
+  /* Glass card */
+  .glass-card {
+    @apply rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-md;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  /* Gradient border card */
+  .gradient-border {
+    position: relative;
+    @apply rounded-2xl;
+  }
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.5), rgba(37,99,235,0.3), transparent);
+    border-radius: inherit;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Button variants */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm text-white 
+           bg-gradient-to-r from-violet-600 to-blue-600 
+           hover:from-violet-500 hover:to-blue-500 
+           transition-all duration-200 shadow-glow hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm text-white/80 
+           border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20
+           transition-all duration-200 hover:-translate-y-0.5;
+  }
+
+  /* Metric card */
+  .metric-card {
+    @apply glass-card px-5 py-4 flex flex-col gap-1;
+  }
+  .metric-label {
+    @apply text-xs font-medium text-white/40 uppercase tracking-widest;
+  }
+  .metric-value {
+    @apply text-2xl font-bold font-mono;
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Formula block */
+  .formula-block {
+    @apply glass-card p-5 my-4 overflow-x-auto;
+    border-left: 3px solid #7c3aed;
+  }
+
+  /* Section title */
+  .section-title {
+    @apply text-lg font-semibold text-white/90 mb-3 flex items-center gap-2;
+  }
+  .section-title::before {
+    content: '';
+    @apply block w-1 h-5 rounded-full bg-gradient-to-b from-violet-500 to-blue-500;
+  }
+
+  /* Nav item */
+  .nav-item {
+    @apply flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-white/50 
+           hover:text-white/90 hover:bg-white/[0.05] transition-all duration-150 cursor-pointer;
+  }
+  .nav-item.active {
+    @apply text-white bg-violet-500/10 border border-violet-500/20;
+  }
+
+  /* Tag / badge */
+  .badge {
+    @apply text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider;
+  }
+  .badge-regression { @apply bg-blue-500/15 text-blue-400 border border-blue-500/20; }
+  .badge-classification { @apply bg-violet-500/15 text-violet-400 border border-violet-500/20; }
+
+  /* Info box */
+  .info-box {
+    @apply glass-card p-4 my-4 border-l-4;
+  }
+  .info-box-tip { border-left-color: #06b6d4; @apply bg-cyan-500/5; }
+  .info-box-warn { border-left-color: #f59e0b; @apply bg-amber-500/5; }
+  .info-box-info { border-left-color: #7c3aed; @apply bg-violet-500/5; }
+
+  /* Slider track */
+  .slider-track { @apply h-1.5 rounded-full bg-white/10; }
+  .slider-range { @apply h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-500; }
+  .slider-thumb {
+    @apply w-4 h-4 rounded-full bg-white border-2 border-violet-500 shadow-glow 
+           transition-transform hover:scale-125 cursor-grab active:cursor-grabbing;
+  }
+}
+
+/* KaTeX overrides for dark theme */
+.katex { color: #e2d9f3 !important; font-size: 1.05em; }
+.katex-display { @apply my-4; }
+
+/* Recharts dark theme overrides */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line { stroke: rgba(255,255,255,0.05) !important; }
+.recharts-text { fill: rgba(255,255,255,0.45) !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; }
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: rgba(13,13,26,0.95) !important;
+  border: 1px solid rgba(124,58,237,0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+}
+.recharts-tooltip-item-name,
+.recharts-tooltip-item-value { color: rgba(255,255,255,0.8) !important; }
+.recharts-legend-item-text { color: rgba(255,255,255,0.5) !important; }
