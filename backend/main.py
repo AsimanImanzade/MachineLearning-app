@@ -12,8 +12,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allow all origins for cloud deployment
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False, # Must be False if using wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )
