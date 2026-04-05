@@ -1,7 +1,8 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // Use the Render link directly
+  // Hardcoded fallback for production stability
+  baseURL: import.meta.env.VITE_API_URL || 'https://machinelearning-app.onrender.com',
   headers: { 'Content-Type': 'application/json' },
 })
 
