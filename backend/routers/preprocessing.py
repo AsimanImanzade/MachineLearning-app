@@ -5,6 +5,7 @@ from typing import List, Optional
 import numpy as np
 import pandas as pd
 import os
+from functools import lru_cache
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -15,10 +16,14 @@ router = APIRouter(prefix="/api/linear", tags=["Preprocessing"])
 DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "housing_prices.csv")
 
 
+@lru_cache(maxsize=1)
+def __cached_load_housing():
+    return pd.read_csv(DATA_PATH)
+
 def _load_housing():
     """Load the housing prices dataset."""
-    df = pd.read_csv(DATA_PATH)
-    return df
+    df = __cached_load_housing()
+    return df.copy()
 
 
 class PreprocessRequest(BaseModel):

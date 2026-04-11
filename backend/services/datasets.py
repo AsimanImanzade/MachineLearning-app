@@ -1,6 +1,7 @@
 """Dataset generators and loaders for all ML modules."""
 import numpy as np
 import pandas as pd
+from functools import lru_cache
 from sklearn.datasets import (
     make_regression, make_classification, make_moons,
     make_circles, make_blobs, fetch_california_housing
@@ -10,8 +11,9 @@ from sklearn.preprocessing import StandardScaler
 
 # ── Housing Dataset ───────────────────────────────────────────────────────────
 
-def get_housing_dataframe() -> pd.DataFrame:
-    """Return California Housing with renamed, interpretable columns."""
+@lru_cache(maxsize=1)
+def _get_cached_california_housing() -> pd.DataFrame:
+    """Cache the fetch operation to save memory."""
     data = fetch_california_housing(as_frame=True)
     df = data.frame.copy()
     df.columns = [
@@ -19,6 +21,11 @@ def get_housing_dataframe() -> pd.DataFrame:
         "Population", "AveOccup", "Latitude", "Longitude", "MedHouseVal"
     ]
     return df
+
+def get_housing_dataframe() -> pd.DataFrame:
+    """Return California Housing with renamed, interpretable columns."""
+    df = _get_cached_california_housing()
+    return df.copy()
 
 
 HOUSING_FEATURES = [
