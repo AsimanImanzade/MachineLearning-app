@@ -5,6 +5,7 @@ import StandardLR from './pages/linear-regression/StandardLR'
 import LassoLR from './pages/linear-regression/LassoLR'
 import RidgeLR from './pages/linear-regression/RidgeLR'
 import ElasticNetLR from './pages/linear-regression/ElasticNetLR'
+import PreprocessingLR from './pages/linear-regression/PreprocessingLR'
 import LogisticReg from './pages/logistic-regression/LogisticReg'
 import KNNClassification from './pages/knn/KNNClassification'
 import KNNRegression from './pages/knn/KNNRegression'
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/linear/lasso" element={<LassoLR />} />
           <Route path="/linear/ridge" element={<RidgeLR />} />
           <Route path="/linear/elasticnet" element={<ElasticNetLR />} />
+          <Route path="/linear/preprocessing" element={<PreprocessingLR />} />
           <Route path="/logistic" element={<LogisticReg />} />
           <Route path="/knn/classification" element={<KNNClassification />} />
           <Route path="/knn/regression" element={<KNNRegression />} />

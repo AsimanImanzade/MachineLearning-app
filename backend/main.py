@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import linear_regression, logistic_regression, knn, decision_tree, random_forest
+from routers import linear_regression, logistic_regression, knn, decision_tree, random_forest, preprocessing
 
 app = FastAPI(
     title="DataScienceApp API",
@@ -23,6 +23,7 @@ app.include_router(logistic_regression.router)
 app.include_router(knn.router)
 app.include_router(decision_tree.router)
 app.include_router(random_forest.router)
+app.include_router(preprocessing.router)
 
 
 @app.get("/")

@@ -10,6 +10,7 @@ const NAV = [
       { label: 'Lasso (L1)', path: '/linear/lasso', tag: 'reg' },
       { label: 'Ridge (L2)', path: '/linear/ridge', tag: 'reg' },
       { label: 'ElasticNet', path: '/linear/elasticnet', tag: 'reg' },
+      { label: 'Preprocessing', path: '/linear/preprocessing', tag: 'reg' },
     ],
   },
   {

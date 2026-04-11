@@ -13,6 +13,10 @@ export const linearTrain = (params: object) => api.post('/linear/train', params)
 export const linearOverfit = (params: object) => api.post('/linear/overfit-sandbox', params).then(r => r.data)
 export const linearRealDataset = (params: object) => api.post('/linear/real-dataset', params).then(r => r.data)
 
+// ── Preprocessing (Outlier + Scaling + Encoding) ───────────────────────────
+export const prepDatasetInfo = () => api.get('/linear/preprocessing/dataset-info').then(r => r.data)
+export const prepTrain = (params: object) => api.post('/linear/preprocessing/train', params).then(r => r.data)
+
 // ── Logistic Regression ────────────────────────────────────────────────────
 export const logisticTrain = (params: object) => api.post('/logistic/train', params).then(r => r.data)
 
