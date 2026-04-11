@@ -11,6 +11,7 @@ export default api
 // ── Linear Regression ──────────────────────────────────────────────────────
 export const linearTrain = (params: object) => api.post('/linear/train', params).then(r => r.data)
 export const linearOverfit = (params: object) => api.post('/linear/overfit-sandbox', params).then(r => r.data)
+export const linearRealDataset = (params: object) => api.post('/linear/real-dataset', params).then(r => r.data)
 
 // ── Logistic Regression ────────────────────────────────────────────────────
 export const logisticTrain = (params: object) => api.post('/logistic/train', params).then(r => r.data)
