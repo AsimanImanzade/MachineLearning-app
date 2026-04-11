@@ -16,6 +16,8 @@ interface TrainResult {
   coefficients: { feature: string; value: number }[]
 }
 
+const ALL_FEATURES = ['MedIncome', 'HouseAge', 'AveRooms', 'AveBedrms', 'Population', 'AveOccup', 'Latitude', 'Longitude']
+
 export default function StandardLR() {
   const [noise, setNoise] = useState(0.3)
   const [nSamples, setNSamples] = useState(200)
@@ -27,6 +29,14 @@ export default function StandardLR() {
   const [activeTab, setActiveTab] = useState<'theory' | 'playground' | 'overfit' | 'real-dataset'>('theory')
   const [codeStep, setCodeStep] = useState(0)
   const [testSize, setTestSize] = useState(0.2)
+  const [activeFeatures, setActiveFeatures] = useState<string[]>([...ALL_FEATURES])
+  const [scoreHistory, setScoreHistory] = useState<{features: string[], trainR2: number, testR2: number, trainRMSE: number, testRMSE: number}[]>([])
+
+  const toggleFeature = (f: string) => {
+    setActiveFeatures(prev =>
+      prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]
+    )
+  }
 
   const train = useCallback(async () => {
     setLoading(true)
@@ -43,14 +53,25 @@ export default function StandardLR() {
   }, [noise, nSamples])
 
   const loadRealDataset = useCallback(async () => {
+    if (activeFeatures.length === 0) return
     setRealLoading(true)
     try {
-      const res = await linearRealDataset({ test_size: testSize })
+      const res = await linearRealDataset({ test_size: testSize, features: activeFeatures })
       setRealData(res)
+      setScoreHistory(prev => [
+        ...prev,
+        {
+          features: [...activeFeatures],
+          trainR2: res.train_metrics.r2,
+          testR2: res.test_metrics.r2,
+          trainRMSE: res.train_metrics.rmse,
+          testRMSE: res.test_metrics.rmse,
+        }
+      ])
     } finally {
       setRealLoading(false)
     }
-  }, [testSize])
+  }, [testSize, activeFeatures])
 
   const tabs = ['theory', 'playground', 'overfit', 'real-dataset'] as const
 
@@ -332,13 +353,36 @@ export default function StandardLR() {
             <p className="text-sm text-white/50 leading-relaxed mb-4">
               This is a <strong>real-world dataset</strong> derived from the 1990 U.S. census. Each row represents a census block group in California. The target variable is the <strong>median house value</strong> (in units of $100,000). You will see the complete end-to-end machine learning workflow below.
             </p>
+
+            {/* Feature Selection */}
+            <div className="mb-4 p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+              <h4 className="text-sm font-semibold text-white/80 mb-2">🔧 Feature Selection — Toggle features on/off to see impact on scores</h4>
+              <p className="text-[11px] text-white/40 mb-3">Click a feature to remove it, then re-run. Watch how R² and RMSE change. Try removing "MedIncome" — the strongest predictor.</p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_FEATURES.map(f => (
+                  <button key={f} onClick={() => toggleFeature(f)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all border ${
+                      activeFeatures.includes(f)
+                        ? 'bg-violet-500/20 text-violet-300 border-violet-500/30'
+                        : 'bg-red-500/10 text-white/30 border-red-500/20 line-through'
+                    }`}>
+                    {f}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 mt-2 text-[10px] text-white/30">
+                <span className="inline-block w-2 h-2 rounded bg-violet-500/40"></span> Active ({activeFeatures.length})
+                <span className="inline-block w-2 h-2 rounded bg-red-500/30 ml-2"></span> Removed ({ALL_FEATURES.length - activeFeatures.length})
+              </div>
+            </div>
+
             <div className="flex items-end gap-4">
               <div className="flex-1">
                 <SliderWithTooltip label="Test Size" min={0.1} max={0.4} step={0.05} value={testSize} onChange={setTestSize}
                   tooltip="Fraction of data reserved for testing. 0.2 means 80% train / 20% test." />
               </div>
-              <button onClick={loadRealDataset} disabled={realLoading} className="btn-primary justify-center px-8 mb-1">
-                {realLoading ? '⟳ Training…' : '▶ Run Full Pipeline'}
+              <button onClick={loadRealDataset} disabled={realLoading || activeFeatures.length === 0} className="btn-primary justify-center px-8 mb-1">
+                {realLoading ? '⟳ Training…' : activeFeatures.length === 0 ? '⚠ Select Features' : `▶ Run (${activeFeatures.length} features)`}
               </button>
             </div>
           </div>
@@ -490,6 +534,85 @@ export default function StandardLR() {
                 </ResponsiveContainer>
                 <p className="text-xs text-white/40 text-center italic mt-1">Dashed line = perfect predictions. Points on the line = zero error.</p>
               </div>
+
+              {/* Feature Impact History */}
+              {scoreHistory.length > 0 && (
+                <div className="glass-card p-6">
+                  <h3 className="section-title mb-4">🧪 Feature Impact History</h3>
+                  <p className="text-xs text-white/40 mb-3">
+                    Each row below is a separate run. Compare how adding/removing features changes the scores. The best Test R² is highlighted in green.
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-white/10">
+                          <th className="px-3 py-2 text-left text-white/50 font-medium">#</th>
+                          <th className="px-3 py-2 text-left text-white/50 font-medium">Features Used</th>
+                          <th className="px-3 py-2 text-center text-white/50 font-medium">Count</th>
+                          <th className="px-3 py-2 text-center text-violet-400 font-medium">Train R²</th>
+                          <th className="px-3 py-2 text-center text-blue-400 font-medium">Test R²</th>
+                          <th className="px-3 py-2 text-center text-cyan-400 font-medium">Train RMSE</th>
+                          <th className="px-3 py-2 text-center text-pink-400 font-medium">Test RMSE</th>
+                          <th className="px-3 py-2 text-center text-white/50 font-medium">Δ R² (gap)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const bestTestR2 = Math.max(...scoreHistory.map(s => s.testR2))
+                          return scoreHistory.map((s, i) => {
+                            const gap = Math.abs(s.trainR2 - s.testR2)
+                            const isBest = s.testR2 === bestTestR2
+                            const removedFeatures = ALL_FEATURES.filter(f => !s.features.includes(f))
+                            return (
+                              <tr key={i} className={`border-b border-white/5 ${isBest ? 'bg-emerald-500/5' : 'hover:bg-white/[0.02]'}`}>
+                                <td className="px-3 py-2 text-white/30 font-mono">{i + 1}</td>
+                                <td className="px-3 py-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    {s.features.map(f => (
+                                      <span key={f} className="px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-300 text-[9px] font-mono">{f}</span>
+                                    ))}
+                                    {removedFeatures.map(f => (
+                                      <span key={f} className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400/50 text-[9px] font-mono line-through">{f}</span>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 text-center text-white/40 font-mono">{s.features.length}/{ALL_FEATURES.length}</td>
+                                <td className="px-3 py-2 text-center text-violet-300 font-mono">{s.trainR2.toFixed(4)}</td>
+                                <td className={`px-3 py-2 text-center font-mono font-semibold ${isBest ? 'text-emerald-400' : 'text-blue-300'}`}>
+                                  {s.testR2.toFixed(4)} {isBest && '⭐'}
+                                </td>
+                                <td className="px-3 py-2 text-center text-cyan-300 font-mono">{s.trainRMSE.toFixed(4)}</td>
+                                <td className="px-3 py-2 text-center text-pink-300 font-mono">{s.testRMSE.toFixed(4)}</td>
+                                <td className={`px-3 py-2 text-center font-mono ${gap > 0.1 ? 'text-red-400' : gap > 0.05 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                  {gap.toFixed(4)}
+                                </td>
+                              </tr>
+                            )
+                          })
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                  {scoreHistory.length >= 2 && (
+                    <div className="mt-4 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                      <div className="text-xs text-white/50 leading-relaxed">
+                        <strong className="text-white/70">💡 Analysis: </strong>
+                        {(() => {
+                          const first = scoreHistory[0]
+                          const last = scoreHistory[scoreHistory.length - 1]
+                          const diff = last.testR2 - first.testR2
+                          if (diff > 0.01) return `Test R² improved by ${diff.toFixed(4)} from Run 1 → Run ${scoreHistory.length}. Your feature selection helped!`
+                          if (diff < -0.01) return `Test R² dropped by ${Math.abs(diff).toFixed(4)} from Run 1 → Run ${scoreHistory.length}. You removed an important feature.`
+                          return `Test R² is nearly unchanged (Δ=${diff.toFixed(4)}). The removed features had little predictive value.`
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                  <button onClick={() => setScoreHistory([])} className="mt-3 text-[10px] text-white/20 hover:text-white/40 transition-colors">
+                    Clear history
+                  </button>
+                </div>
+              )}
             </>
           )}
 
