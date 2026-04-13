@@ -326,6 +326,73 @@ X_test['furnishingstatus'] = X_test['furnishingstatus'].replace(
             <strong>Categorical encoding</strong> is applied automatically: Ordinal encoding for furnishingstatus, OneHotEncoding (drop_first) for yes/no columns.
           </div>
 
+          {/* Feature Selection & Correlation */}
+          {datasetInfo && datasetInfo.correlation_matrix && (
+            <div className="mb-6 border-t border-white/5 pt-6 mt-6">
+              <h4 className="text-sm font-semibold text-white/70 mb-3">Step 3: Feature Selection & Correlation</h4>
+              <p className="text-[11px] text-white/40 mb-4">Correlation of encoded features with each other and the target (price). Deselect features with low correlation to target, or drop highly correlated features (multicollinearity) marked in <span className="text-red-400">red outline</span>.</p>
+              
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Feature Checkboxes */}
+                <div className="w-full lg:w-1/3">
+                  <div className="flex flex-wrap gap-2">
+                    {datasetInfo.encoded_features.map((f: string) => {
+                      const isActive = (selectedFeatures || datasetInfo.encoded_features).includes(f)
+                      return (
+                        <button key={f} onClick={() => {
+                          const current = selectedFeatures || datasetInfo.encoded_features
+                          setSelectedFeatures(isActive ? current.filter((x: string) => x !== f) : [...current, f])
+                        }}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-mono transition-all border ${
+                            isActive ? 'bg-violet-600/30 text-violet-300 border-violet-500/40' : 'bg-white/[0.04] text-white/30 border-white/[0.06] hover:text-white/50 line-through'
+                          }`}>
+                          {isActive ? '✓ ' : ''}{f}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Correlation Heatmap */}
+                <div className="w-full lg:w-2/3 overflow-x-auto pb-4">
+                  <table className="w-max text-[9px] font-mono border-separate" style={{ borderSpacing: '1px' }}>
+                    <thead>
+                      <tr>
+                        <th className="p-1 min-w-[70px]"></th>
+                        {datasetInfo.correlation_matrix.map((row: any) => (
+                           <th key={row.feature} className="p-1 text-white/40 font-normal origin-bottom-left whitespace-nowrap align-bottom h-20" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{row.feature}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {datasetInfo.correlation_matrix.map((row: any) => (
+                        <tr key={row.feature}>
+                           <td className="p-1 text-white/60 text-right whitespace-nowrap">{row.feature}</td>
+                           {datasetInfo.correlation_matrix.map((col: any) => {
+                             const val = row[col.feature]
+                             const alpha = Math.abs(val)
+                             let color = 'rgba(255,255,255,0.02)'
+                             if (val === 1.0) color = 'rgba(139, 92, 246, 0.4)'
+                             else if (val > 0) color = `rgba(139, 92, 246, ${alpha})`
+                             else if (val < 0) color = `rgba(239, 68, 68, ${alpha})`
+                             
+                             const isMulticollinear = row.feature !== col.feature && alpha >= 0.7 && row.feature !== 'price' && col.feature !== 'price'
+                             
+                             return (
+                               <td key={col.feature} className={`p-1.5 text-center font-semibold rounded-sm ${isMulticollinear ? 'ring-1 ring-red-500 ring-inset z-10 relative shadow-[0_0_8px_rgba(239,68,68,0.6)]' : ''}`} style={{ backgroundColor: color }}>
+                                  {val.toFixed(2)}
+                               </td>
+                             )
+                           })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
           <button onClick={runPipeline} disabled={loading} className="btn-primary w-full justify-center">
             {loading ? '⟳ Running Pipeline…' : '▶ Run Full Preprocessing Pipeline'}
           </button>
