@@ -30,7 +30,11 @@ export default function PreprocessingLR() {
 
   useEffect(() => {
     setInfoLoading(true)
-    prepDatasetInfo().then(d => { setDatasetInfo(d); setUniqueCol(d.columns[0]) }).finally(() => setInfoLoading(false))
+    prepDatasetInfo().then(d => { 
+      setDatasetInfo(d); 
+      setUniqueCol(d.columns[0]);
+      setSelectedFeatures(d.encoded_features);
+    }).finally(() => setInfoLoading(false))
   }, [])
 
   const toggleOutlier = (f: string) => {
@@ -46,11 +50,7 @@ export default function PreprocessingLR() {
       const res = await prepTrain(payload)
       setResult(res)
       
-      if (selectedFeatures === null) {
-        setSelectedFeatures(res.all_available_features)
-      }
-      
-      const dropped = res.all_available_features.filter((f: string) => !res.feature_names_after_encoding.includes(f))
+      const dropped = datasetInfo?.encoded_features?.filter((f: string) => !(selectedFeatures || []).includes(f)) || []
       
       setScoreHistory(prev => [...prev, {
         scaler: scalerType,
@@ -387,70 +387,7 @@ X_test['furnishingstatus'] = X_test['furnishingstatus'].replace(
               </div>
             </div>
 
-            {/* Feature Selection & Correlation */}
-            <div className="glass-card p-6">
-              <h3 className="section-title mb-3">🔗 Feature Selection & Correlation</h3>
-              <p className="text-xs text-white/40 mb-4">Correlation of encoded features with the target (price). Deselect features to see how removing them impacts the model.</p>
-              
-              <div className="flex flex-col lg:flex-row gap-6">
-                {/* Feature Checkboxes */}
-                <div className="w-full lg:w-1/3">
-                  <div className="flex flex-wrap gap-2">
-                    {result.all_available_features.map((f: string) => {
-                      const isActive = (selectedFeatures || result.all_available_features).includes(f)
-                      return (
-                        <button key={f} onClick={() => {
-                          const current = selectedFeatures || result.all_available_features
-                          setSelectedFeatures(isActive ? current.filter((x: string) => x !== f) : [...current, f])
-                        }}
-                          className={`px-3 py-1.5 rounded-lg text-[10px] font-mono transition-all border ${
-                            isActive ? 'bg-violet-600/30 text-violet-300 border-violet-500/40' : 'bg-white/[0.04] text-white/30 border-white/[0.06] hover:text-white/50 line-through'
-                          }`}>
-                          {isActive ? '✓ ' : ''}{f}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <button onClick={runPipeline} disabled={loading} className="btn-secondary w-full justify-center mt-4 text-xs py-2">
-                    {loading ? '⟳ Re-training...' : '▶ Re-train with Selection'}
-                  </button>
-                </div>
-
-                {/* Correlation Heatmap */}
-                <div className="w-full lg:w-2/3 overflow-x-auto">
-                  <table className="w-full max-w-full text-[9px] font-mono border-separate" style={{ borderSpacing: '1px' }}>
-                    <thead>
-                      <tr>
-                        <th className="p-1"></th>
-                        {result.correlation_matrix.map((row: any) => (
-                           <th key={row.feature} className="p-1 text-white/40 rotate-45 origin-bottom-left whitespace-nowrap h-16 align-bottom">{row.feature}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.correlation_matrix.map((row: any) => (
-                        <tr key={row.feature}>
-                           <td className="p-1 text-white/60 text-right whitespace-nowrap">{row.feature}</td>
-                           {result.correlation_matrix.map((col: any) => {
-                             const val = row[col.feature]
-                             const alpha = Math.abs(val)
-                             let color = 'rgba(255,255,255,0.02)'
-                             if (val === 1.0) color = 'rgba(139, 92, 246, 0.8)'
-                             else if (val > 0) color = `rgba(139, 92, 246, ${alpha})`
-                             else if (val < 0) color = `rgba(239, 68, 68, ${alpha})`
-                             return (
-                               <td key={col.feature} className="p-1 text-center font-semibold rounded-sm" style={{ backgroundColor: color }}>
-                                  {val.toFixed(2)}
-                               </td>
-                             )
-                           })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+            {/* Feature Selection UI moved up */}
 
             {/* DataFrame After Encoding */}
             <div className="glass-card p-6">

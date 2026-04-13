@@ -38,6 +38,24 @@ class PreprocessRequest(BaseModel):
 def dataset_info():
     """Return dataset overview."""
     df = _load_housing()
+    
+    # Generate correlation matrix of encoded features for frontend
+    corr_df = df.copy()
+    ordinal_map = {"unfurnished": 0, "semi-furnished": 1, "furnished": 2}
+    corr_df["furnishingstatus"] = corr_df["furnishingstatus"].replace(ordinal_map)
+    binary_nominal = ["mainroad", "guestroom", "basement", "hotwaterheating", "airconditioning", "prefarea"]
+    corr_df = pd.get_dummies(corr_df, columns=binary_nominal, drop_first=True, dtype=int)
+    
+    corr_matrix_raw = corr_df.corr().round(2)
+    corr_matrix = []
+    for col in corr_matrix_raw.columns:
+        row = {"feature": col}
+        for inner_col in corr_matrix_raw.columns:
+            row[inner_col] = float(corr_matrix_raw.loc[col, inner_col])
+        corr_matrix.append(row)
+        
+    encoded_features = [c for c in corr_df.columns if c != "price"]
+    
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     categorical_cols = df.select_dtypes(include=["object"]).columns.tolist()
 
@@ -58,6 +76,8 @@ def dataset_info():
         "preview": df.head(10).to_dict(orient="records"),
         "describe": df.describe().round(2).to_dict(),
         "unique_values": unique_values,
+        "correlation_matrix": corr_matrix,
+        "encoded_features": encoded_features,
     }
 
 
@@ -130,17 +150,6 @@ def preprocessing_train(req: PreprocessRequest):
 
     feature_names_after_encoding = list(X_train.columns)
     preview_after_encoding_train = X_train.head(5).round(4).to_dict(orient="records")
-
-    # Correlation Matrix
-    corr_df = X_train.copy()
-    corr_df[target] = y_train
-    corr_matrix_raw = corr_df.corr().round(2)
-    corr_matrix = []
-    for col in corr_matrix_raw.columns:
-        row = {"feature": col}
-        for inner_col in corr_matrix_raw.columns:
-            row[inner_col] = float(corr_matrix_raw.loc[col, inner_col])
-        corr_matrix.append(row)
 
     all_available_features = list(X_train.columns)
 
@@ -264,6 +273,5 @@ def preprocessing_train(req: PreprocessRequest):
         "scatter_actual": scatter_actual,
         "scatter_predicted": scatter_predicted,
         "code_steps": code_steps,
-        "correlation_matrix": corr_matrix,
         "all_available_features": all_available_features,
     }
