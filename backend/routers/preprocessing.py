@@ -46,15 +46,6 @@ def dataset_info():
     binary_nominal = ["mainroad", "guestroom", "basement", "hotwaterheating", "airconditioning", "prefarea"]
     corr_df = pd.get_dummies(corr_df, columns=binary_nominal, drop_first=True, dtype=int)
     
-    corr_df = corr_df.apply(pd.to_numeric, errors="coerce").fillna(0)
-    corr_matrix_raw = corr_df.corr(numeric_only=True).round(2)
-    corr_matrix = []
-    for col in corr_matrix_raw.columns:
-        row = {"feature": col}
-        for inner_col in corr_matrix_raw.columns:
-            row[inner_col] = float(corr_matrix_raw.loc[col, inner_col])
-        corr_matrix.append(row)
-        
     encoded_features = [c for c in corr_df.columns if c != "price"]
     
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
@@ -77,7 +68,6 @@ def dataset_info():
         "preview": df.head(10).to_dict(orient="records"),
         "describe": df.describe().round(2).to_dict(),
         "unique_values": unique_values,
-        "correlation_matrix": corr_matrix,
         "encoded_features": encoded_features,
     }
 
@@ -159,6 +149,19 @@ def preprocessing_train(req: PreprocessRequest):
         if valid_features:
             X_train = X_train[valid_features]
             X_test = X_test[valid_features]
+            feature_names_after_encoding = list(X_train.columns)
+
+    # Calculate Matrix AFTER filtering
+    corr_df2 = X_train.copy()
+    corr_df2[target] = y_train
+    corr_df2 = corr_df2.apply(pd.to_numeric, errors="coerce").fillna(0)
+    corr_matrix_raw = corr_df2.corr(numeric_only=True).round(2)
+    corr_matrix = []
+    for col in corr_matrix_raw.columns:
+        row = {"feature": col}
+        for inner_col in corr_matrix_raw.columns:
+            row[inner_col] = float(corr_matrix_raw.loc[col, inner_col])
+        corr_matrix.append(row)
 
     # ── Step 4: Feature Scaling ───────────────────────────────────
     scaler_name = req.scaler_type
@@ -274,5 +277,6 @@ def preprocessing_train(req: PreprocessRequest):
         "scatter_actual": scatter_actual,
         "scatter_predicted": scatter_predicted,
         "code_steps": code_steps,
+        "correlation_matrix": corr_matrix,
         "all_available_features": all_available_features,
     }

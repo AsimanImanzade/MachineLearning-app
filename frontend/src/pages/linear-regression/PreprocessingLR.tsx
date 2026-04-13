@@ -327,15 +327,12 @@ X_test['furnishingstatus'] = X_test['furnishingstatus'].replace(
           </div>
 
           {/* Feature Selection & Correlation */}
-          {datasetInfo && datasetInfo.correlation_matrix && (
+          {datasetInfo && (
             <div className="mb-6 border-t border-white/5 pt-6 mt-6">
-              <h4 className="text-sm font-semibold text-white/70 mb-3">Step 3: Feature Selection & Correlation</h4>
-              <p className="text-[11px] text-white/40 mb-4">Correlation of encoded features with each other and the target (price). Deselect features with low correlation to target, or drop highly correlated features (multicollinearity) marked in <span className="text-red-400">red outline</span>.</p>
+              <h4 className="text-sm font-semibold text-white/70 mb-3">Step 3: Feature Selection</h4>
+              <p className="text-[11px] text-white/40 mb-4">Deselect features you suspect will be bad for your model. Their impact will be evaluated next.</p>
               
-              <div className="flex flex-col lg:flex-row gap-6">
-                {/* Feature Checkboxes */}
-                <div className="w-full lg:w-1/3">
-                  <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                     {datasetInfo.encoded_features.map((f: string) => {
                       const isActive = (selectedFeatures || datasetInfo.encoded_features).includes(f)
                       return (
@@ -351,45 +348,6 @@ X_test['furnishingstatus'] = X_test['furnishingstatus'].replace(
                       )
                     })}
                   </div>
-                </div>
-
-                {/* Correlation Heatmap */}
-                <div className="w-full lg:w-2/3 overflow-x-auto pb-4">
-                  <table className="w-max text-[9px] font-mono border-separate" style={{ borderSpacing: '1px' }}>
-                    <thead>
-                      <tr>
-                        <th className="p-1 min-w-[70px]"></th>
-                        {datasetInfo.correlation_matrix.map((row: any) => (
-                           <th key={row.feature} className="p-1 text-white/40 font-normal origin-bottom-left whitespace-nowrap align-bottom h-20" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{row.feature}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {datasetInfo.correlation_matrix.map((row: any) => (
-                        <tr key={row.feature}>
-                           <td className="p-1 text-white/60 text-right whitespace-nowrap">{row.feature}</td>
-                           {datasetInfo.correlation_matrix.map((col: any) => {
-                             const val = row[col.feature]
-                             const alpha = Math.abs(val)
-                             let color = 'rgba(255,255,255,0.02)'
-                             if (val === 1.0) color = 'rgba(139, 92, 246, 0.4)'
-                             else if (val > 0) color = `rgba(139, 92, 246, ${alpha})`
-                             else if (val < 0) color = `rgba(239, 68, 68, ${alpha})`
-                             
-                             const isMulticollinear = row.feature !== col.feature && alpha >= 0.7 && row.feature !== 'price' && col.feature !== 'price'
-                             
-                             return (
-                               <td key={col.feature} className={`p-1.5 text-center font-semibold rounded-sm ${isMulticollinear ? 'ring-1 ring-red-500 ring-inset z-10 relative shadow-[0_0_8px_rgba(239,68,68,0.6)]' : ''}`} style={{ backgroundColor: color }}>
-                                  {val.toFixed(2)}
-                               </td>
-                             )
-                           })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
             </div>
           )}
 
@@ -455,6 +413,47 @@ X_test['furnishingstatus'] = X_test['furnishingstatus'].replace(
             </div>
 
             {/* Feature Selection UI moved up */}
+
+            {/* Correlation Heatmap */}
+            <div className="glass-card p-6">
+              <h3 className="section-title mb-3">🔗 Dynamic Correlation Matrix</h3>
+              <p className="text-[11px] text-white/40 mb-4">Correlation of currently active features. Highly correlated features (multicollinearity) are marked in <span className="text-red-400">red outline</span> and might be dragging your model performance down.</p>
+              <div className="w-full overflow-x-auto pb-4">
+                <table className="w-max text-[9px] font-mono border-separate" style={{ borderSpacing: '1px' }}>
+                  <thead>
+                    <tr>
+                      <th className="p-1 min-w-[70px]"></th>
+                      {result.correlation_matrix.map((row: any) => (
+                         <th key={row.feature} className="p-1 text-white/40 font-normal origin-bottom-left whitespace-nowrap align-bottom h-20"><div className="transform -rotate-45 translate-x-2 -translate-y-2">{row.feature}</div></th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.correlation_matrix.map((row: any) => (
+                      <tr key={row.feature}>
+                         <td className="p-1 text-white/60 text-right whitespace-nowrap">{row.feature}</td>
+                         {result.correlation_matrix.map((col: any) => {
+                           const val = row[col.feature]
+                           const alpha = Math.abs(val)
+                           let color = 'rgba(255,255,255,0.02)'
+                           if (val === 1.0) color = 'rgba(139, 92, 246, 0.4)'
+                           else if (val > 0) color = `rgba(139, 92, 246, ${alpha})`
+                           else if (val < 0) color = `rgba(239, 68, 68, ${alpha})`
+                           
+                           const isMulticollinear = row.feature !== col.feature && alpha >= 0.7 && row.feature !== 'price' && col.feature !== 'price'
+                           
+                           return (
+                             <td key={col.feature} className={`p-1.5 text-center font-semibold rounded-sm w-10 ${isMulticollinear ? 'ring-1 ring-red-500 ring-inset z-10 relative shadow-[0_0_8px_rgba(239,68,68,0.6)]' : ''}`} style={{ backgroundColor: color }}>
+                                {val.toFixed(2)}
+                             </td>
+                           )
+                         })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
             {/* DataFrame After Encoding */}
             <div className="glass-card p-6">
