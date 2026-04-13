@@ -5,7 +5,7 @@ import InfoPanel from '../../components/ui/InfoPanel'
 import { prepDatasetInfo, prepTrain } from '../../api/client'
 import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Cell } from 'recharts'
 
-const NUMERIC_COLS = ['area', 'bedrooms', 'bathrooms', 'stories', 'parking']
+const NUMERIC_COLS = ['price', 'area', 'bedrooms', 'bathrooms', 'stories', 'parking']
 const SCALERS = [
   { id: 'none', label: 'No Scaling', color: 'text-white/40' },
   { id: 'minmax', label: 'Min-Max', color: 'text-emerald-400' },
@@ -22,6 +22,7 @@ export default function PreprocessingLR() {
   const [infoLoading, setInfoLoading] = useState(false)
   const [scalerType, setScalerType] = useState('none')
   const [outlierFeatures, setOutlierFeatures] = useState<string[]>([])
+  const [selectedFeatures, setSelectedFeatures] = useState<string[] | null>(null)
   const [testSize, setTestSize] = useState(0.2)
   const [codeStep, setCodeStep] = useState(0)
   const [uniqueCol, setUniqueCol] = useState('')
@@ -39,18 +40,29 @@ export default function PreprocessingLR() {
   const runPipeline = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await prepTrain({ scaler_type: scalerType, outlier_features: outlierFeatures, test_size: testSize })
+      const payload: any = { scaler_type: scalerType, outlier_features: outlierFeatures, test_size: testSize }
+      if (selectedFeatures) payload.selected_features = selectedFeatures
+      
+      const res = await prepTrain(payload)
       setResult(res)
+      
+      if (selectedFeatures === null) {
+        setSelectedFeatures(res.all_available_features)
+      }
+      
+      const dropped = res.all_available_features.filter((f: string) => !res.feature_names_after_encoding.includes(f))
+      
       setScoreHistory(prev => [...prev, {
         scaler: scalerType,
         outliers: [...outlierFeatures],
+        droppedFeatures: dropped,
         trainR2: res.train_metrics.r2,
         testR2: res.test_metrics.r2,
         trainRMSE: res.train_metrics.rmse,
         testRMSE: res.test_metrics.rmse,
       }])
     } finally { setLoading(false) }
-  }, [scalerType, outlierFeatures, testSize])
+  }, [scalerType, outlierFeatures, testSize, selectedFeatures])
 
   return (
     <div className="animate-slide-up">
@@ -375,6 +387,71 @@ X_test['furnishingstatus'] = X_test['furnishingstatus'].replace(
               </div>
             </div>
 
+            {/* Feature Selection & Correlation */}
+            <div className="glass-card p-6">
+              <h3 className="section-title mb-3">🔗 Feature Selection & Correlation</h3>
+              <p className="text-xs text-white/40 mb-4">Correlation of encoded features with the target (price). Deselect features to see how removing them impacts the model.</p>
+              
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Feature Checkboxes */}
+                <div className="w-full lg:w-1/3">
+                  <div className="flex flex-wrap gap-2">
+                    {result.all_available_features.map((f: string) => {
+                      const isActive = (selectedFeatures || result.all_available_features).includes(f)
+                      return (
+                        <button key={f} onClick={() => {
+                          const current = selectedFeatures || result.all_available_features
+                          setSelectedFeatures(isActive ? current.filter((x: string) => x !== f) : [...current, f])
+                        }}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-mono transition-all border ${
+                            isActive ? 'bg-violet-600/30 text-violet-300 border-violet-500/40' : 'bg-white/[0.04] text-white/30 border-white/[0.06] hover:text-white/50 line-through'
+                          }`}>
+                          {isActive ? '✓ ' : ''}{f}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button onClick={runPipeline} disabled={loading} className="btn-secondary w-full justify-center mt-4 text-xs py-2">
+                    {loading ? '⟳ Re-training...' : '▶ Re-train with Selection'}
+                  </button>
+                </div>
+
+                {/* Correlation Heatmap */}
+                <div className="w-full lg:w-2/3 overflow-x-auto">
+                  <table className="w-full max-w-full text-[9px] font-mono border-separate" style={{ borderSpacing: '1px' }}>
+                    <thead>
+                      <tr>
+                        <th className="p-1"></th>
+                        {result.correlation_matrix.map((row: any) => (
+                           <th key={row.feature} className="p-1 text-white/40 rotate-45 origin-bottom-left whitespace-nowrap h-16 align-bottom">{row.feature}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.correlation_matrix.map((row: any) => (
+                        <tr key={row.feature}>
+                           <td className="p-1 text-white/60 text-right whitespace-nowrap">{row.feature}</td>
+                           {result.correlation_matrix.map((col: any) => {
+                             const val = row[col.feature]
+                             const alpha = Math.abs(val)
+                             let color = 'rgba(255,255,255,0.02)'
+                             if (val === 1.0) color = 'rgba(139, 92, 246, 0.8)'
+                             else if (val > 0) color = `rgba(139, 92, 246, ${alpha})`
+                             else if (val < 0) color = `rgba(239, 68, 68, ${alpha})`
+                             return (
+                               <td key={col.feature} className="p-1 text-center font-semibold rounded-sm" style={{ backgroundColor: color }}>
+                                  {val.toFixed(2)}
+                               </td>
+                             )
+                           })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
             {/* DataFrame After Encoding */}
             <div className="glass-card p-6">
               <h3 className="section-title mb-3">📋 DataFrame After Encoding</h3>
@@ -484,7 +561,7 @@ X_test['furnishingstatus'] = X_test['furnishingstatus'].replace(
                       <tr className="border-b border-white/10">
                         <th className="px-3 py-2 text-left text-white/50">#</th>
                         <th className="px-3 py-2 text-left text-white/50">Scaler</th>
-                        <th className="px-3 py-2 text-left text-white/50">Outlier Removal</th>
+                        <th className="px-3 py-2 text-left text-white/50">Outlier/Removed Features</th>
                         <th className="px-3 py-2 text-center text-violet-400">Train R²</th>
                         <th className="px-3 py-2 text-center text-blue-400">Test R²</th>
                         <th className="px-3 py-2 text-center text-cyan-400">Train RMSE</th>
@@ -498,7 +575,10 @@ X_test['furnishingstatus'] = X_test['furnishingstatus'].replace(
                           <tr key={i} className={`border-b border-white/5 ${s.testR2 === best ? 'bg-emerald-500/5' : ''}`}>
                             <td className="px-3 py-2 text-white/30 font-mono">{i + 1}</td>
                             <td className="px-3 py-2 text-white/60 font-mono">{s.scaler}</td>
-                            <td className="px-3 py-2 text-white/50 text-[10px]">{s.outliers.length > 0 ? s.outliers.join(', ') : 'None'}</td>
+                            <td className="px-3 py-2 text-white/50 text-[10px]">
+                              <div><span className="text-amber-400/50">Outliers:</span> {s.outliers.length > 0 ? s.outliers.join(', ') : 'None'}</div>
+                              {s.droppedFeatures?.length > 0 && <div><span className="text-red-400/50">Dropped:</span> {s.droppedFeatures.join(', ')}</div>}
+                            </td>
                             <td className="px-3 py-2 text-center text-violet-300 font-mono">{s.trainR2.toFixed(4)}</td>
                             <td className={`px-3 py-2 text-center font-mono font-semibold ${s.testR2 === best ? 'text-emerald-400' : 'text-blue-300'}`}>
                               {s.testR2.toFixed(4)} {s.testR2 === best && '⭐'}

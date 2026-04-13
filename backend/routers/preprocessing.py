@@ -31,6 +31,7 @@ class PreprocessRequest(BaseModel):
     outlier_features: List[str] = []  # which numeric features to apply IQR outlier removal
     test_size: float = 0.2
     random_state: int = 42
+    selected_features: Optional[List[str]] = None
 
 
 @router.get("/preprocessing/dataset-info")
@@ -74,7 +75,7 @@ def preprocessing_train(req: PreprocessRequest):
     outlier_info = {}
     rows_before = len(df)
     for feat in req.outlier_features:
-        if feat in df.columns and feat in numeric_cols:
+        if feat in df.columns and (feat in numeric_cols or feat == target):
             Q1 = df[feat].quantile(0.25)
             Q3 = df[feat].quantile(0.75)
             IQR = Q3 - Q1
@@ -129,6 +130,25 @@ def preprocessing_train(req: PreprocessRequest):
 
     feature_names_after_encoding = list(X_train.columns)
     preview_after_encoding_train = X_train.head(5).round(4).to_dict(orient="records")
+
+    # Correlation Matrix
+    corr_df = X_train.copy()
+    corr_df[target] = y_train
+    corr_matrix_raw = corr_df.corr().round(2)
+    corr_matrix = []
+    for col in corr_matrix_raw.columns:
+        row = {"feature": col}
+        for inner_col in corr_matrix_raw.columns:
+            row[inner_col] = float(corr_matrix_raw.loc[col, inner_col])
+        corr_matrix.append(row)
+
+    all_available_features = list(X_train.columns)
+
+    if req.selected_features is not None:
+        valid_features = [f for f in req.selected_features if f in X_train.columns]
+        if valid_features:
+            X_train = X_train[valid_features]
+            X_test = X_test[valid_features]
 
     # ── Step 4: Feature Scaling ───────────────────────────────────
     scaler_name = req.scaler_type
@@ -244,4 +264,6 @@ def preprocessing_train(req: PreprocessRequest):
         "scatter_actual": scatter_actual,
         "scatter_predicted": scatter_predicted,
         "code_steps": code_steps,
+        "correlation_matrix": corr_matrix,
+        "all_available_features": all_available_features,
     }
