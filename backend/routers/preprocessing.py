@@ -46,7 +46,8 @@ def dataset_info():
     binary_nominal = ["mainroad", "guestroom", "basement", "hotwaterheating", "airconditioning", "prefarea"]
     corr_df = pd.get_dummies(corr_df, columns=binary_nominal, drop_first=True, dtype=int)
     
-    corr_matrix_raw = corr_df.corr().round(2)
+    corr_df = corr_df.apply(pd.to_numeric, errors="coerce").fillna(0)
+    corr_matrix_raw = corr_df.corr(numeric_only=True).round(2)
     corr_matrix = []
     for col in corr_matrix_raw.columns:
         row = {"feature": col}
